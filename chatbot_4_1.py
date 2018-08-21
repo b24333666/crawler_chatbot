@@ -3,21 +3,15 @@ from chatterbot.trainers import ChatterBotCorpusTrainer
 from chatterbot import ChatBot
 from chatterbot.trainers import ListTrainer
 
-import speech_recognition as sr
-
-# from gensim import models
-
 import new_skill_project4_1
 
 import jieba
 from jieba import analyse
 
-import pymongo
 from pymongo import MongoClient
 
 chatbot = ChatBot(
     "link",
-    
     trainer = 'chatterbot.trainers.ChatterBotCorpusTrainer',
     storage_adapter="chatterbot.storage.MongoDatabaseAdapter",
     logic_adapters=[
@@ -42,8 +36,8 @@ chatbot = ChatBot(
 # jieba.analyse.set_stop_words('user_stopwords.txt')
 # jieba.load_userdict(".\dict.txt.big") 
 # chatbot.set_trainer(ChatterBotCorpusTrainer)
-chatbot.set_trainer(ListTrainer)
-# chatbot.train("chatterbot.corpus.english")# 載入英文的語言庫
+# chatbot.set_trainer(ListTrainer)
+chatbot.train("chatterbot.corpus.chinesezh_tw")# load zh_tw corpus
 
 # chatbot.train(["你覺得你自己哪裡最厲害","目前我並不厲害,厲害的是你們的創造力"])
 

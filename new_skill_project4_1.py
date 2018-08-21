@@ -2,12 +2,13 @@ import logging
 import re
 import webbrowser
 
-import MySQLdb
+# import MySQLdb
+import pymysql
 import pymongo
 import requests
 from bs4 import BeautifulSoup
-from gensim import models
-from gensim.models import word2vec
+# from gensim import models
+# from gensim.models import word2vec
 from pymongo import MongoClient
 
 uri = "mongodb://localhost/" 
@@ -75,10 +76,11 @@ class google:
         # print(type(user_choice))
         u_link = user_choice['link']
         webbrowser.open(u_link, new=0, autoraise=True) 
+        u_link_name = user_choice['title']
         #new=0, url會在同一個 瀏覽器視窗中開啟 ; new=1，新的瀏覽器視窗會被開啟 ; new=2  新的瀏覽器tab會被開啟
         # webbrowser.open_new(u_link) 
         # webbrowser.open_new_tab(u_link)
-        return u_link
+        return u_link_name
 
     def google_search(self):
         keyword = self
@@ -111,11 +113,13 @@ class google:
         # print(type(user_choice))
         u_link = user_choice['link']
         webbrowser.open(u_link, new=0, autoraise=True) #new=0, url會在同一個 瀏覽器視窗中開啟 ; new=1，新的瀏覽器視窗會被開啟 ; new=2  新的瀏覽器tab會被開啟
+        u_link_title = user_choice['title']
+        say = "已幫您開啟"+str(u_link_title)+" YouTube網頁"
         # webbrowser.open_new(u_link) 
         # webbrowser.open_new_tab(u_link)
         # print(u_link)
         # print(type(u_link))
-        return u_link
+        return say
 
     def youtube_serach(self):
         keyword = self
@@ -123,7 +127,7 @@ class google:
         res = requests.get(url+keyword)
         soup = BeautifulSoup(res.text,'html.parser')
         y_info = {}
-        gi = input('搜尋多少影片')
+        gi = input('搜尋多少部影片:')
         
         for i in range(0,int(gi)):
             a_title_1 = soup.select(".yt-uix-tile-link")[i].text
@@ -146,6 +150,8 @@ class yahoo:
         # print(type(user_choice))
         u_link = user_choice['yahoo_title_link']
         webbrowser.open(u_link, new=0, autoraise=True) 
+        u_link_title ="已幫您開啟Yahoo! " + str(user_choice['class_title']) + " 新聞"
+        return u_link_title
 
 
     def yahoo_news(self):
@@ -197,12 +203,12 @@ class money:
             pass
 
 
-class sql:
+class msql:
 
     def sales_sql(self):
         productsname = self
         productset = {}
-        db = MySQLdb.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+        db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
         cursor = db.cursor()
         sql = "SELECT * FROM unmannedstore.products where ProductName like '" + productsname + "';"
         cursor.execute(sql)
@@ -215,7 +221,7 @@ class sql:
     
     def mysql_user_banlance(self):
         accounts = self
-        db = MySQLdb.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+        db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
         cursor = db.cursor()
         sql = "SELECT * FROM unmannedstore.member where Account like '" + accounts + "'; "
         cursor.execute(sql)
@@ -224,7 +230,7 @@ class sql:
 
     def mysql_create_user(self):
         accounts = self
-        db = MySQLdb.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+        db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
         cursor = db.cursor()
         sql = "INSERT INTO unmannedstore.member (member.Account,member.Password,member.UserName,member.Balance,member.PhoneNumber,member.Address) values ('" + accounts + "'); "
         print(sql)
@@ -235,7 +241,7 @@ class sql:
 
     def confirm_account(self):
         accounts = self
-        db = MySQLdb.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+        db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
         cursor = db.cursor()
         sql = "SELECT * FROM unmannedstore.member where Account like '" + accounts + "'; "
         cursor.execute(sql)
@@ -244,19 +250,50 @@ class sql:
 
 
 class op:
+
+    def add_balance():
+        try:
+            user_account = input('請輸入帳戶: ')
+            user_password = input('請輸入密碼: ')
+            password = msql.confirm_account(user_account)
+            while password == user_password:
+                user_money = input("請輸入加值金額: ")
+                db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+                cursor = db.cursor()
+                sql = "SELECT * FROM unmannedstore.member where Account like '" + str(user_account) + "'; "
+                cursor.execute(sql)
+                u_blance = cursor.fetchone()
+                # print(u_blance)
+                add_money = int(u_blance[4]) + int(user_money)
+                sql = "UPDATE unmannedstore.member SET member.Balance = " + str(add_money) + " where Account = '" + str(user_account) + "'; "
+                cursor.execute(sql)
+                db.commit()
+                sql = "SELECT * FROM unmannedstore.member where Account like '" + str(user_account) + "'; "
+                cursor.execute(sql)
+                u_blance = cursor.fetchone()
+                ub = "加值完成!!目前餘額為: " + str(u_blance[4]) + "元整"
+                db.close()
+                return ub
+            else :
+                # pass
+                keyword = input('密碼錯誤!!請再嘗試一次 按 "q" 離開 或 按Enter繼續\n')
+                while keyword =="離開" or keyword.lower() == "exit" or keyword.lower() == "q":
+                    break
+                else:
+                    op.add_balance()
+        except TypeError:
+            print('找不到此帳戶!!請再重新輸入一次<(=_=)>')
+            op.add_balance()
+
     def balance():
         try:
             user_account = input('請輸入帳戶: ')
             user_password = input('請輸入密碼: ')
-            password = sql.confirm_account(user_account)
+            password = msql.confirm_account(user_account)
             while password == user_password:
-                user_balance = sql.mysql_user_banlance(user_account)
-                # totle = sql.sales_sql(name[i]) #要放購買紀錄
-                # user_b = user_balance[2] - totle[1][0]
-                # account = "ID: " + str(user_balance[0]) +  " 會員帳戶: " + str(user_balance[1]) + " 目前餘額: " + str(user_b)
+                user_balance = msql.mysql_user_banlance(user_account)
                 account = "ID: " + str(user_balance[0]) +  " 會員帳戶: " + str(user_balance[1]) + " 目前餘額: " + str(user_balance[2])
                 return account
-            
             else :
                 # pass
                 keyword = input('密碼錯誤!!請再嘗試一次 按 "q" 離開 或 按Enter繼續\n')
@@ -264,8 +301,7 @@ class op:
                     break
                 else:
                     op.balance()
-
-            
+   
         except TypeError:
             print('找不到此帳戶!!請再重新輸入一次<(=_=)>')
             op.balance()
@@ -273,34 +309,51 @@ class op:
     def Checkout():
         totle_p = []
         allp = []
-        name = ["雪碧","茶裏王","衛生紙"]
-        Quantity = [2,1,2]
-        for i in range(0,len(name)):
-            productsprice =  sql.sales_sql(name[i])
-            products_info = productsprice[0]
-            products_p = int(productsprice[1][0])
-            totle_p.append(products_p)
-            all_p = products_p * Quantity[i]
-            allp.append(all_p)
-            print("本次購買品項為: 品名: "+str(products_info['title']) +"\t單價: " + str(products_info['price']) + " 數量: " + str(Quantity[i]) + "\t小計: " + str(all_p) )
-        print("==========================================================")
-        at = sum(allp)
-        t = "總計: " + str(sum(allp)) + "元整"
-        return t,at
+        user_account = input('請輸入帳戶: ')
+        user_password = input('請輸入密碼: ')
+        password = msql.confirm_account(user_account)
+        while password == user_password:
+            db = pymysql.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
+            cursor = db.cursor()
+            sql = "SELECT * FROM unmannedstore.member where Account like '" + user_account + "'; "
+            cursor.execute(sql)
+            user = cursor.fetchone()
+            name = ["雪碧","茶裏王","衛生紙"]
+            Quantity = [2,1,2]
+            for i in range(0,len(name)):
+                productsprice =  msql.sales_sql(name[i])
+                products_info = productsprice[0]
+                products_p = int(productsprice[1][0])
+                totle_p.append(products_p)
+                all_p = products_p * Quantity[i]
+                allp.append(all_p)
+                print("本次購買品項為: 品名: "+str(products_info['title']) +"\t單價: " + str(products_info['price']) + " 數量: " + str(Quantity[i]) + "\t小計: " + str(all_p) )
+            print("========================================================================")
+            at = sum(allp)
+            t = "總計: " + str(sum(allp)) + "元整"
+            user_b = user[4] - at
+            sql = "UPDATE unmannedstore.member SET member.Balance = " + str(user_b) + " where Account = '" + str(user_account) + "'; "
+            # sql = "UPDATE unmannedstore.member SET member.Balance = 5000 where Account = 'abc' ;"
+            cursor.execute(sql)
+            db.commit()
+            sql = "SELECT * FROM unmannedstore.member where Account like '" + str(user_account) + "'; "
+            cursor.execute(sql)
+            u_blance = cursor.fetchone()
+            ub = "目前餘額為: " + str(u_blance[4]) + "元整"
+            db.close()
+            return t,at,ub
+        else :
+            # pass
+            keyword = input('密碼錯誤!!請再嘗試一次 按 "q" 離開 或 按Enter繼續\n')
+            while keyword =="離開" or keyword.lower() == "exit" or keyword.lower() == "q":
+                break
+            else:
+                op.balance()
 
-    def account_updata(self): #要與帳戶作連結
-        updata = self
-        db = MySQLdb.connect(host="localhost",user="root", passwd="root", db="unmannedstore",charset='utf8')
-        cursor = db.cursor()
-        sql = "SELECT * FROM unmannedstore.member where Account like '" + updata + "'; "
-        ce = cursor.execute(sql)
-        user_b = ce[4] - op.Checkout[1]
-        sql = "UPDATA unmannedstore.member SET Balance = " + user_b + "; "
-        ce = cursor.execute(sql)
-        return user_b
 
 class weather:
-    def city_weather(url):
+    def city_weather(self):
+        url = self
         city = {}
         index = "/V7/index.htm"
         n_url = url + index
@@ -317,12 +370,15 @@ class weather:
                 # print(city1)
             city[city_name] = city_link
         # print(city["基隆市"])
-        # search = input("查詢縣市名:")
-        print("查詢縣市名:")
-        # search = speech_input()
+        search = input("查詢縣市名:")
         # search = "臺北市"
+        if len(search) == 2:
+            search = str(search) + "市"
+
         if search in city.keys():
+            # print(search)
             new_url = url + city[search]
+            # print(new_url)
             # print("錯誤"+new_url)
             # print("正確"+"https://www.cwb.gov.tw/V7/forecast/taiwan/Taipei_City.htm")
             return new_url
@@ -384,58 +440,87 @@ class weather:
         # print(tm_county)
         # print(m)
         return am_county,pm_county,tm_county,m,county
+            
 
-wi_ki_zh_name = ["維基"]
-wi_ki_zh_key  = get_permutations2(wi_ki_zh_name)
+
+
+wi_ki_zh_name = ["查詢","維基"]
+wi_ki_zh_key  = get_permutations2(wi_ki_zh_name)+get_combinations(wi_ki_zh_name)
 wi_ki_en_name = ['wiki']
-wi_ki_en_key = get_permutations2(wi_ki_en_name)
+wi_ki_en_key = get_permutations2(wi_ki_en_name)+get_combinations(wi_ki_zh_name)
 wi_ki_key = wi_ki_en_key + wi_ki_zh_key
 
 
-google_zh_name = ["谷歌"]
-google_zh_key  = get_permutations2(google_zh_name)
-google_en_name = ['google']
-google_en_key = get_permutations2(google_en_name)
+google_zh_name = ["我要","幫我","谷歌"]
+google_zh_key  = get_permutations2(google_zh_name)+get_combinations(google_zh_name)
+google_en_name = ['幫我','google' ,"ok"]
+google_en_key = get_permutations2(google_en_name)+get_combinations(google_en_name)
 google_key = google_en_key+ google_zh_key
 
-weather_zh_key = ['查','查詢','天氣']
-weather_zh_key = get_permutations2(weather_zh_key)+get_combinations(weather_zh_key)
-weather_en_key = ["weather"]
-weather_en_key = get_permutations2(weather_en_key)+get_combinations(weather_en_key)
-weather_key = weather_en_key+weather_zh_key
 
-dict_zh_name = ["字典"]
-dict_zh_key  = get_permutations2(dict_zh_name)
+dict_zh_name = ["字典","查詢"]
+dict_zh_key  = get_permutations2(dict_zh_name)+get_combinations(dict_zh_name)
 dict_en_name = ['dictionary'] 
-dict_en_key = get_permutations2(dict_en_name)
+dict_en_key = get_permutations2(dict_en_name)+get_combinations(dict_en_name)
 dict_key = dict_en_key + dict_zh_key + ['dict']
 # print(dict_key)
     
 
 
 exchange_zh_name = ["匯率"]
-exchange_zh_key  = get_permutations2(exchange_zh_name)
+exchange_zh_key  = get_permutations2(exchange_zh_name)+get_combinations(exchange_zh_name)
 exchange_en_name = ['exchange']
-exchange_en_key = get_permutations2(exchange_en_name)
+exchange_en_key = get_permutations2(exchange_en_name)+get_combinations(exchange_en_name)
 exchange_key = exchange_en_key + exchange_zh_key
 
 
 yahoo_news_zh_name = ['新聞','奇摩']
-yahoo_news_zh_key = get_permutations2(yahoo_news_zh_name)
+yahoo_news_zh_key = get_permutations2(yahoo_news_zh_name)+get_combinations(yahoo_news_zh_name)
 yahoo_news_en_name = ["news",'yahoo']
-yahoo_news_en_key = get_permutations2(yahoo_news_en_name)
+yahoo_news_en_key = get_permutations2(yahoo_news_en_name)+get_combinations(yahoo_news_en_name)
 yahoo_news_key = yahoo_news_en_key+yahoo_news_zh_key
 # print(yahoo_news_key)
 
 
+store_checkout_zh_key = ['結帳','我']
+store_checkout_zh_key = get_permutations2(yahoo_news_zh_name)+get_combinations(store_checkout_zh_key)
+store_checkout_en_key = ["want",'checkout']
+store_checkout_en_key = get_permutations2(yahoo_news_en_name)+get_combinations(store_checkout_en_key)
+store_checkout_key = store_checkout_en_key+store_checkout_zh_key
+
+weather_zh_key = ['查','查詢','天氣']
+weather_zh_key = get_permutations2(weather_zh_key)+get_combinations(weather_zh_key)
+weather_en_key = ["weather"]
+weather_en_key = get_permutations2(weather_en_key)+get_combinations(weather_en_key)
+weather_key = weather_en_key+weather_zh_key
+# print(weather_key)
+
+store_addstord_zh_key = ['要','加值','儲值']
+store_addstord_zh_key = get_permutations2(yahoo_news_zh_name)+get_combinations(store_addstord_zh_key)
+store_addstord_en_key = ["want",'add',"Stored","value"]
+store_addstord_en_key = get_permutations2(yahoo_news_en_name)+get_combinations(store_addstord_zh_key)
+store_addstord_key = store_addstord_en_key+store_addstord_zh_key
+
+
+store_add_balance_zh_key = ['查詢','餘額','有多少錢']
+store_add_balance_zh_key = get_permutations2(store_add_balance_zh_key) + get_combinations(store_add_balance_zh_key)
+store_add_balance_en_key = ["balance"]
+store_add_balance_en_key = get_permutations2(yahoo_news_en_name) + get_combinations(store_add_balance_en_key)
+store_add_balance_key = store_add_balance_en_key+store_add_balance_zh_key
+
+store_creatuser_zh_key = ['新增',"會員",'新增','增加']
+store_creatuser_zh_key = get_permutations2(store_creatuser_zh_key) + get_combinations(store_creatuser_zh_key)
+store_creatuser_en_key = ["creatuser"]
+store_creatuser_en_key = get_permutations2(store_creatuser_en_key) + get_combinations(store_creatuser_en_key)
+store_creat_user_key = store_creatuser_en_key+store_creatuser_zh_key
+# print(store_creat_user_key)
+
 def search(i):
     try:
-        while i =="離開" or i.lower() == "exit" or i.lower() == "q":
+        if i =="離開" or i.lower() == "exit" or i.lower() == "q":
             print("歡迎下次再來")
-            break
+            # break
         else: 
-            # print(dict_en_key)
-            # print(dict_zh_key)
             # if i == "維基" or i.lower() =='wiki' or i == "維基百科":
             if i.lower() in wi_ki_key:
                 print("歡迎來到維基百科")
@@ -460,6 +545,21 @@ def search(i):
                     # print(i)
                     return g_choice
             
+            elif i.lower() in weather_key:
+                print("Welcome weather")
+                url = "https://www.cwb.gov.tw"
+                city_link = weather.city_weather(url)
+                status = weather.c_status(city_link)
+                try:
+                    q = input("請問要查詢 '今日白天' '今晚至明晨' 還是 '明天白天' 的天氣:")
+                    d = {"今日白天":0,"今晚至明晨":1,"明天白天":2}
+                    bot_say ="您查詢的縣市為" + str(status[4]) + "溫度大約" + str(status[d[q]][q]["溫度"]) + "℃ 之間" + ",當地天氣狀況為" + str(status[d[q]][q]["天氣狀況"]) + ",感覺" + str(status[d[q]][q]["舒適度"]) + ',降雨機率大約有 ' + str(status[d[q]][q]["降雨機率"]+"左右。")
+                    return bot_say   
+                
+                except KeyError:
+                    print("輸入錯誤!!請再重新輸入")
+
+
             elif i.lower() == "youtube":
                 print("YouTube 歡迎您")
                 keyword = input("你想要找的{}: ".format('影片')) # 要實現把youtube加入我的最愛 紀錄於mongodb上
@@ -469,26 +569,9 @@ def search(i):
                 else:
                     i = google.youtube_serach(keyword)
                     user_choice = google.youtube_choice(i)
-                    # print(type(user_choice))
+                    # print(user_choice)
                     return user_choice
                 
-
-            elif i.lower() in weather_key:
-                print("Welcome weather")
-                url = "https://www.cwb.gov.tw"
-                city_link = weather.city_weather(url)
-                status = weather.c_status(city_link)
-                try:
-                    # q = input("請問要查詢 '今日白天' '今晚至明晨' 還是 '明天白天' 的天氣:")
-                    print("請問要查詢 '今日白天' '今晚至明晨' 還是 '明天白天' 的天氣:")
-                    # q = speech_input()
-                    d = {"今日白天":0,"今晚至明晨":1,"明天白天":2}
-                    bot_say ="您查詢的縣市為" + str(status[4]) + "溫度範圍為" + str(status[d[q]][q]["溫度"]) + "℃ " + ",天氣狀況大概是" + str(status[d[q]][q]["天氣狀況"]) + ",感覺" + str(status[d[q]][q]["舒適度"]) + ',降雨機率大約有 ' + str(status[d[q]][q]["降雨機率"]+"左右。")
-                    return bot_say   
-                
-                except KeyError:
-                    print("輸入錯誤!!請再重新輸入")
-
             elif i.lower() in exchange_key:
                 print("歡迎光臨 Bank~!")
                 keyword = input("請輸入{}: ".format('幣別')) # 要實現圖片輸出並記錄每天價格
@@ -506,16 +589,22 @@ def search(i):
                 print(type(zd))
                 return zd
 
-            elif i == "結帳" or i.lower() == "Checkout":
+            elif  i.lower() in store_checkout_key :
                 r = op.Checkout()
-                return r[0]
+                c = r[0] + "\n"+ r[2]
+                return c
 
 
-            elif i == "餘額" or i.lower() == "Balance":
-                op.balance()
+            elif i.lower() in store_addstord_key :
+                add_m = op.add_balance()
+                return add_m 
+
+            elif i.lower() in store_add_balance_key :
+                r_balance = op.balance()
+                return r_balance
 
 
-            elif i == "新增會員" or i.lower() == "createuser":
+            elif i.lower() in store_creat_user_key :
                 user_account1 = input('帳號: ')
                 user_account2 = input('密碼: ')
                 user_account3 = input('姓名: ')
@@ -524,29 +613,24 @@ def search(i):
                 user_account6 = input('聯絡地址: ')
                 user_account = str(user_account1) + "','" + str(user_account2) + "','" +  str(user_account3) + "','" + str(user_account4) + "','" +  str(user_account5) + "','" +  str(user_account6)              
                 # print(user_account)
-                sql.mysql_create_user(user_account)
+                msql.mysql_create_user(user_account)
                 # print(user_info)
                 create = "新增會員完成!!"
                 return create
 
-            # elif i == "購買紀錄" or i.lower() == "hitstory":
-            #     user_account = input('請輸入查詢帳戶: ')
-            #     user_balance = sql.mysql_user_banlance(user_account)
-
-
-
             elif i.lower() in yahoo_news_key:
                 print("歡迎 Yahoo_News")
+                
                 # keyword = input("請輸入{}: ".format('新聞類別')) # 要實現圖片輸出並記錄每天價格
-                while keyword =="離開" or keyword.lower() == "exit" or keyword.lower() == "q":
-                    print("歡迎下次再來")
-                    continue
-                else:
-                    url = "https://tw.news.yahoo.com/"
-                    y = yahoo.yahoo_news(url)
-                    i = yahoo.yahoo_choice(y)
-                    # print(i)
-                    return i
+                # while keyword =="離開"  or keyword.lower() == "q":
+                #     print("歡迎下次再來")
+                #     break
+                # else:
+                url = "https://tw.news.yahoo.com/"
+                y = yahoo.yahoo_news(url)
+                i = yahoo.yahoo_choice(y)
+                # print(i)
+                return i
 
 
     except AttributeError :
@@ -554,8 +638,8 @@ def search(i):
         search(i)
     except ValueError :
         pass
-
-
+    # except:
+    #     pass
 
 
 
